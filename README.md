@@ -1,0 +1,487 @@
+<!-- OBJETIVA-AGRO-V3-FUNCIONAL -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Objetiva Agro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root {
+    --espresso: #1E3A2A;
+    --bark: #6B5238;
+    --parchment: #EEEBDD;
+    --parchment-dark: #DCD6BE;
+    --cherry: #A8442F;
+    --leaf: #7A9B54;
+    --caramel: #8A5A32;
+    --card-bg: #FFFDF8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #DED2B8;
+    font-family: 'Work Sans', sans-serif;
+    color: var(--espresso);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  #app {
+    width: 100%;
+    max-width: 480px;
+    background: var(--parchment);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 18px 10px;
+    border-bottom: 1px solid var(--parchment-dark);
+  }
+  header .logo {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  header .farm {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--bark);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  main { flex: 1; padding: 14px 16px 90px; overflow-y: auto; }
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    margin: 4px 0 14px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--parchment-dark);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .card .title { font-weight: 600; font-size: 14px; }
+  .card .meta { font-size: 11px; color: var(--bark); margin-top: 2px; }
+  .card .nota { font-size: 12.5px; margin-top: 6px; }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(122,155,84,0.15);
+    color: var(--leaf);
+  }
+  .badge.critico { background: rgba(168,68,47,0.12); color: var(--cherry); }
+  form {
+    background: var(--card-bg);
+    border: 1px solid var(--parchment-dark);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  label { font-size: 11px; color: var(--bark); font-family: 'JetBrains Mono', monospace; }
+  input, select, textarea {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 13.5px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--parchment-dark);
+    background: var(--parchment);
+    color: var(--espresso);
+    width: 100%;
+  }
+  textarea { resize: vertical; min-height: 50px; }
+  button {
+    font-family: 'Work Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 10px;
+    border-radius: 12px;
+    border: none;
+    background: var(--espresso);
+    color: var(--parchment);
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  button:active { transform: scale(0.98); }
+  nav {
+    position: sticky;
+    bottom: 0;
+    background: var(--card-bg);
+    border-top: 1px solid var(--parchment-dark);
+    display: flex;
+  }
+  nav button.tab {
+    flex: 1;
+    background: transparent;
+    color: var(--bark);
+    font-size: 10.5px;
+    font-weight: 400;
+    border-radius: 0;
+    padding: 10px 2px;
+    margin: 0;
+  }
+  nav button.tab.active { color: var(--cherry); font-weight: 600; }
+  .empty { text-align: center; color: var(--bark); font-size: 12.5px; padding: 24px 0; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .config-warning {
+    background: #fff3cd;
+    border: 1px solid #c99a2e;
+    color: #6b4f10;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    margin: 14px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="logo">Objetiva Agro</span>
+    <span class="farm">Sítio Jatobá</span>
+  </header>
+  <main id="main"></main>
+  <nav id="nav"></nav>
+</div>
+
+<script>
+/* =======================================================================
+   CONFIGURAÇÃO — troque as duas linhas abaixo pelos dados do SEU projeto
+   Onde encontrar: no Supabase, vá em "Project Settings" (ícone de
+   engrenagem) > "API". Copie "Project URL" e a chave "anon public".
+   ======================================================================= */
+const SUPABASE_URL = "https://gxggowavxoicnxhayole.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_ZFePRJ--nXm1-doIeunEAw_yy2JnH4C";
+/* ======================================================================= */
+
+const configOk = !SUPABASE_URL.startsWith("COLE_AQUI") && !SUPABASE_ANON_KEY.startsWith("COLE_AQUI");
+let supabase = null;
+let libError = null;
+try {
+  if (configOk) {
+    if (!window.supabase) throw new Error("Biblioteca do Supabase não carregou (sem internet ou CDN bloqueado).");
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+} catch (err) {
+  libError = err.message;
+}
+
+const TABS = [
+  { key: "atividades", label: "Atividades" },
+  { key: "estoque", label: "Estoque" },
+  { key: "equipe", label: "Equipe" },
+  { key: "maquinas", label: "Máquinas" },
+  { key: "talhoes", label: "Talhões" },
+];
+
+let state = { tab: "atividades", talhoes: [], funcionarios: [] };
+
+function fmtData(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " +
+         d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+async function loadLookups() {
+  if (!configOk) return;
+  const { data: talhoes } = await supabase.from("talhoes").select("*").order("nome");
+  const { data: funcionarios } = await supabase.from("funcionarios").select("*").order("nome");
+  state.talhoes = talhoes || [];
+  state.funcionarios = funcionarios || [];
+}
+
+function renderNav() {
+  const nav = document.getElementById("nav");
+  nav.innerHTML = "";
+  TABS.forEach(t => {
+    const b = document.createElement("button");
+    b.className = "tab" + (state.tab === t.key ? " active" : "");
+    b.textContent = t.label;
+    b.onclick = () => { state.tab = t.key; render(); };
+    nav.appendChild(b);
+  });
+}
+
+async function render() {
+  renderNav();
+  const main = document.getElementById("main");
+
+  if (!configOk) {
+    main.innerHTML = `<div class="config-warning">
+      ⚠️ Falta configurar a conexão com o Supabase. Abra este arquivo, procure
+      "CONFIGURACAO" no topo do código e cole a Project URL e a anon key do
+      seu projeto (em Project Settings → API no Supabase).
+    </div>`;
+    return;
+  }
+
+  if (libError) {
+    main.innerHTML = `<div class="config-warning">⚠️ ${libError}</div>`;
+    return;
+  }
+
+  await loadLookups();
+
+  if (state.tab === "atividades") return renderAtividades(main);
+  if (state.tab === "estoque") return renderEstoque(main);
+  if (state.tab === "equipe") return renderEquipe(main);
+  if (state.tab === "maquinas") return renderMaquinas(main);
+  if (state.tab === "talhoes") return renderTalhoes(main);
+}
+
+// ---------- Talhões ----------
+async function renderTalhoes(main) {
+  main.innerHTML = `
+    <h2>Talhões</h2>
+    <form id="form-talhao">
+      <label>Nome do talhão</label>
+      <input name="nome" placeholder="Ex: Talhão 3" required />
+      <label>Variedade</label>
+      <input name="variedade" placeholder="Ex: Catuaí" />
+      <div class="row2">
+        <div>
+          <label>Área (ha)</label>
+          <input name="area_ha" type="number" step="0.1" placeholder="0.0" />
+        </div>
+        <div>
+          <label>Idade (anos)</label>
+          <input name="idade_anos" type="number" placeholder="0" />
+        </div>
+      </div>
+      <button type="submit">Salvar talhão</button>
+    </form>
+    <div id="lista-talhoes"></div>
+  `;
+  document.getElementById("form-talhao").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    await supabase.from("talhoes").insert({
+      nome: f.get("nome"),
+      variedade: f.get("variedade") || null,
+      area_ha: f.get("area_ha") || null,
+      idade_anos: f.get("idade_anos") || null,
+    });
+    render();
+  };
+  const list = document.getElementById("lista-talhoes");
+  if (!state.talhoes.length) { list.innerHTML = '<div class="empty">Nenhum talhão cadastrado ainda.</div>'; return; }
+  list.innerHTML = state.talhoes.map(t => `
+    <div class="card">
+      <div class="title">${t.nome}${t.variedade ? " · " + t.variedade : ""}</div>
+      <div class="meta">${t.area_ha ? t.area_ha + "ha" : ""}${t.idade_anos ? " · " + t.idade_anos + " anos" : ""}</div>
+    </div>
+  `).join("");
+}
+
+// ---------- Atividades ----------
+async function renderAtividades(main) {
+  const { data: atividades } = await supabase.from("atividades").select("*, talhoes(nome)").order("data_registro", { ascending: false }).limit(30);
+  const talhaoOptions = state.talhoes.map(t => `<option value="${t.id}">${t.nome}</option>`).join("");
+  main.innerHTML = `
+    <h2>Atividades</h2>
+    <form id="form-atividade">
+      <label>Talhão</label>
+      <select name="talhao_id" required>
+        <option value="">Selecione...</option>
+        ${talhaoOptions}
+      </select>
+      <label>Tipo de atividade</label>
+      <select name="tipo" required>
+        <option value="">Selecione...</option>
+        <option>Poda</option><option>Adubação</option><option>Aplicação</option>
+        <option>Colheita</option><option>Irrigação</option><option>Outro</option>
+      </select>
+      <label>Nota (texto do registro)</label>
+      <textarea name="nota" placeholder="Ex: aplicamos herbicida, 20 litros"></textarea>
+      <button type="submit">Registrar atividade</button>
+    </form>
+    <div id="lista-atividades"></div>
+  `;
+  document.getElementById("form-atividade").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    if (!state.talhoes.length) { alert("Cadastre um talhão primeiro, na aba Talhões."); return; }
+    await supabase.from("atividades").insert({
+      talhao_id: f.get("talhao_id"),
+      tipo: f.get("tipo"),
+      nota: f.get("nota") || null,
+      modo_captura: "texto",
+    });
+    render();
+  };
+  const list = document.getElementById("lista-atividades");
+  if (!atividades || !atividades.length) { list.innerHTML = '<div class="empty">Nenhuma atividade registrada ainda.</div>'; return; }
+  list.innerHTML = atividades.map(a => `
+    <div class="card">
+      <div class="title">${a.tipo} — ${a.talhoes ? a.talhoes.nome : "talhão"}</div>
+      ${a.nota ? `<div class="nota">${a.nota}</div>` : ""}
+      <div class="meta">${fmtData(a.data_registro)}</div>
+    </div>
+  `).join("");
+}
+
+// ---------- Estoque ----------
+async function renderEstoque(main) {
+  const { data: itens } = await supabase.from("itens_estoque").select("*").order("nome");
+  main.innerHTML = `
+    <h2>Estoque</h2>
+    <form id="form-item">
+      <label>Nome do item</label>
+      <input name="nome" placeholder="Ex: Herbicida pós-emergente" required />
+      <div class="row2">
+        <div>
+          <label>Categoria</label>
+          <input name="categoria" placeholder="Ex: Defensivo" />
+        </div>
+        <div>
+          <label>Unidade</label>
+          <input name="unidade" placeholder="Ex: L, kg, un" />
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Quantidade atual</label>
+          <input name="quantidade" type="number" step="0.1" placeholder="0" />
+        </div>
+        <div>
+          <label>Quantidade mínima</label>
+          <input name="quantidade_minima" type="number" step="0.1" placeholder="0" />
+        </div>
+      </div>
+      <button type="submit">Salvar item</button>
+    </form>
+    <div id="lista-estoque"></div>
+  `;
+  document.getElementById("form-item").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    await supabase.from("itens_estoque").insert({
+      nome: f.get("nome"),
+      categoria: f.get("categoria") || null,
+      unidade: f.get("unidade") || null,
+      quantidade: f.get("quantidade") || 0,
+      quantidade_minima: f.get("quantidade_minima") || 0,
+    });
+    render();
+  };
+  const list = document.getElementById("lista-estoque");
+  if (!itens || !itens.length) { list.innerHTML = '<div class="empty">Nenhum item no estoque ainda.</div>'; return; }
+  list.innerHTML = itens.map(i => {
+    const critico = i.quantidade_minima && i.quantidade <= i.quantidade_minima;
+    return `
+    <div class="card">
+      <div class="title">${i.nome} ${critico ? '<span class="badge critico">repor</span>' : ""}</div>
+      <div class="meta">${i.quantidade ?? 0} ${i.unidade || ""} · mínimo ${i.quantidade_minima ?? 0}${i.unidade || ""}</div>
+    </div>`;
+  }).join("");
+}
+
+// ---------- Equipe ----------
+async function renderEquipe(main) {
+  const { data: apontamentos } = await supabase.from("apontamentos").select("*, funcionarios(nome), atividades(tipo)").order("data_registro", { ascending: false }).limit(30);
+  const funcOptions = state.funcionarios.map(f => `<option value="${f.id}">${f.nome}</option>`).join("");
+  main.innerHTML = `
+    <h2>Equipe</h2>
+    <form id="form-funcionario">
+      <label>Cadastrar novo funcionário</label>
+      <input name="nome" placeholder="Nome" required />
+      <input name="funcao" placeholder="Função (ex: Safrista)" />
+      <button type="submit">Salvar funcionário</button>
+    </form>
+    <form id="form-apontamento">
+      <label>Registrar horas trabalhadas</label>
+      <select name="funcionario_id" required>
+        <option value="">Selecione o funcionário...</option>
+        ${funcOptions}
+      </select>
+      <input name="horas" type="number" step="0.5" placeholder="Horas (ex: 6.5)" required />
+      <button type="submit">Registrar apontamento</button>
+    </form>
+    <div id="lista-apontamentos"></div>
+  `;
+  document.getElementById("form-funcionario").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    await supabase.from("funcionarios").insert({ nome: f.get("nome"), funcao: f.get("funcao") || null });
+    render();
+  };
+  document.getElementById("form-apontamento").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    if (!state.funcionarios.length) { alert("Cadastre um funcionário primeiro, no formulário acima."); return; }
+    await supabase.from("apontamentos").insert({ funcionario_id: f.get("funcionario_id"), horas: f.get("horas") });
+    render();
+  };
+  const list = document.getElementById("lista-apontamentos");
+  if (!apontamentos || !apontamentos.length) { list.innerHTML = '<div class="empty">Nenhum apontamento registrado ainda.</div>'; return; }
+  list.innerHTML = apontamentos.map(a => `
+    <div class="card">
+      <div class="title">${a.funcionarios ? a.funcionarios.nome : "funcionário"} — ${a.horas}h</div>
+      <div class="meta">${fmtData(a.data_registro)}</div>
+    </div>
+  `).join("");
+}
+
+// ---------- Máquinas ----------
+async function renderMaquinas(main) {
+  const { data: maquinas } = await supabase.from("maquinas").select("*").order("nome");
+  main.innerHTML = `
+    <h2>Máquinas</h2>
+    <form id="form-maquina">
+      <label>Nome da máquina</label>
+      <input name="nome" placeholder="Ex: Trator MF 4275" required />
+      <div class="row2">
+        <div>
+          <label>Horas de uso</label>
+          <input name="horas_uso" type="number" placeholder="0" />
+        </div>
+        <div>
+          <label>Última manutenção</label>
+          <input name="ultima_manutencao" type="date" />
+        </div>
+      </div>
+      <label>Próxima manutenção (texto livre)</label>
+      <input name="proxima_manutencao" placeholder="Ex: em 16h de uso" />
+      <button type="submit">Salvar máquina</button>
+    </form>
+    <div id="lista-maquinas"></div>
+  `;
+  document.getElementById("form-maquina").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    await supabase.from("maquinas").insert({
+      nome: f.get("nome"),
+      horas_uso: f.get("horas_uso") || 0,
+      ultima_manutencao: f.get("ultima_manutencao") || null,
+      proxima_manutencao: f.get("proxima_manutencao") || null,
+    });
+    render();
+  };
+  const list = document.getElementById("lista-maquinas");
+  if (!maquinas || !maquinas.length) { list.innerHTML = '<div class="empty">Nenhuma máquina cadastrada ainda.</div>'; return; }
+  list.innerHTML = maquinas.map(m => `
+    <div class="card">
+      <div class="title">${m.nome}</div>
+      <div class="meta">${m.horas_uso || 0}h de uso ${m.proxima_manutencao ? "· manutenção " + m.proxima_manutencao : ""}</div>
+    </div>
+  `).join("");
+}
+
+render();
+</script>
+</body>
+</html>
